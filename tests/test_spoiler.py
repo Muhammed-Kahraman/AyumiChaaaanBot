@@ -4,7 +4,7 @@ from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
-from bot import build_media_caption, send_images, send_video
+from bot import _recent_urls, build_media_caption, seen_recently, send_images, send_video
 from downloader import MediaResult
 from media_preprocessor import (
     analysis_audio_windows,
@@ -69,6 +69,21 @@ class SpoilerDecisionTests(unittest.TestCase):
 
     def test_unknown_string_becomes_null_title(self):
         self.assertIsNone(assessment(anime_title="unknown").anime_title)
+
+
+class RecentUrlTests(unittest.TestCase):
+    def setUp(self):
+        _recent_urls.clear()
+
+    def test_same_url_is_deduplicated_inside_one_chat(self):
+        url = "https://www.instagram.com/reel/example/?first=1"
+        self.assertFalse(seen_recently(url, chat_id=100))
+        self.assertTrue(seen_recently(url, chat_id=100))
+
+    def test_same_url_is_independent_between_private_and_group_chats(self):
+        url = "https://www.instagram.com/reel/example/?first=1"
+        self.assertFalse(seen_recently(url, chat_id=100))
+        self.assertFalse(seen_recently(url, chat_id=-200))
 
 
 class SamplingTests(unittest.TestCase):

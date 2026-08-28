@@ -60,12 +60,12 @@ def extract_urls(text: str) -> list[str]:
 
 
 RECENT_URL_TTL = 180
-_recent_urls: dict[str, float] = {}
+_recent_urls: dict[tuple[int, str], float] = {}
 
 
-def seen_recently(url: str) -> bool:
-    """Link son RECENT_URL_TTL saniye içinde işlendiyse True."""
-    key = url.split("?")[0]
+def seen_recently(url: str, chat_id: int) -> bool:
+    """Link aynı sohbette son RECENT_URL_TTL saniyede işlendiyse True."""
+    key = (chat_id, url.split("?")[0])
     now = time.monotonic()
     for old_key, seen_at in list(_recent_urls.items()):
         if now - seen_at > RECENT_URL_TTL:
@@ -317,7 +317,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     queue: asyncio.Queue = context.application.bot_data["media_queue"]
     for url in urls:
-        if seen_recently(url):
+        if seen_recently(url, message.chat_id):
             logger.info("Link az önce işlendi, atlanıyor: %s", url)
             continue
         logger.info("Link algılandı, kuyruğa ekleniyor: %s", url)
