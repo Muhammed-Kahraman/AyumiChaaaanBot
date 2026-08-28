@@ -1,0 +1,7 @@
+python-telegram-bot>=20.0
+yt-dlp
+python-dotenv
+instaloader
+gallery-dl
+openai>=2.15.0
+pydantic>=2.0
