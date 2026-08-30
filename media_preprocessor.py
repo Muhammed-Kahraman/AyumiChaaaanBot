@@ -144,10 +144,12 @@ async def _extract_frame(video_path: str, timestamp: float, output_path: str) ->
             "-hide_banner",
             "-loglevel",
             "error",
-            "-ss",
-            str(timestamp),
             "-i",
             video_path,
+            # Accurate seeking avoids empty output on videos with unusual
+            # keyframes when fast input seeking is used.
+            "-ss",
+            str(timestamp),
             "-frames:v",
             "1",
             "-vf",
@@ -207,15 +209,20 @@ async def prepare_video(video_path: str, work_dir: str) -> PreparedVideo:
         output = os.path.join(analysis_dir, f"frame_{index:02d}_{timestamp:.3f}.jpg")
         try:
             await _extract_frame(video_path, timestamp, output)
+            if not os.path.isfile(output) or os.path.getsize(output) == 0:
+                raise MediaPreprocessingError("FFmpeg boş kare dosyası üretti")
             frames.append(output)
-        except MediaPreprocessingError as exc:
+        except (MediaPreprocessingError, OSError) as exc:
             logger.warning("Video karesi çıkarılamadı (%.1fs): %s", timestamp, exc)
 
     if not frames:
         raise MediaPreprocessingError("Videodan hiç temsilî kare çıkarılamadı")
 
     audio_parts: list[tuple[float, str]] = []
-    is_partial = metadata.duration > AI_MAX_VIDEO_DURATION_SECONDS
+    is_partial = (
+        metadata.duration > AI_MAX_VIDEO_DURATION_SECONDS
+        or len(frames) < len(timestamps)
+    )
     if metadata.has_audio:
         windows = analysis_audio_windows(
             metadata.duration, AI_MAX_VIDEO_DURATION_SECONDS

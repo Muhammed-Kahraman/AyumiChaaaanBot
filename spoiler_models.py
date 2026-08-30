@@ -74,6 +74,16 @@ def should_hide_as_spoiler(
     if assessment.spoiler_confidence < min_confidence:
         return fallback
 
+    # Anime identification is metadata, not a veto. A model can miss the
+    # anime while still recognizing a death, twist, or other story reveal.
+    if assessment.contains_story_information:
+        return assessment.spoiler_severity >= threshold
+
+    # A newly revealed form/power is itself a story reveal. Vision models
+    # sometimes label it as severity 2 despite describing it as a reveal.
+    if "transformation" in assessment.categories and assessment.spoiler_severity >= 2:
+        return True
+
     if not assessment.is_anime:
         if assessment.anime_confidence >= min_confidence:
             return False

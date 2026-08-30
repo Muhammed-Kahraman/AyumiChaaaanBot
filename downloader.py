@@ -9,6 +9,7 @@ import logging
 import os
 import re
 import shutil
+import subprocess
 import threading
 import uuid
 from dataclasses import dataclass, field
@@ -17,7 +18,15 @@ from typing import Optional
 import instaloader
 import yt_dlp
 
-from config import DOWNLOAD_DIR, MAX_FILE_SIZE, MAX_IMAGES, IG_COOKIES, X_COOKIES
+from config import (
+    DOWNLOAD_DIR,
+    FFMPEG_PATH,
+    FFPROBE_PATH,
+    IG_COOKIES,
+    MAX_FILE_SIZE,
+    MAX_IMAGES,
+    X_COOKIES,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +67,42 @@ def cleanup(path: str) -> None:
 
 def _check_size(filepath: str) -> bool:
     return os.path.getsize(filepath) <= MAX_FILE_SIZE
+
+
+def _ensure_telegram_video(filepath: str) -> str:
+    """Normalize downloaded media to Telegram's broadly playable H.264/AAC MP4."""
+    probe = subprocess.run(
+        [
+            FFPROBE_PATH,
+            "-v", "error",
+            "-select_streams", "v:0",
+            "-show_entries", "stream=codec_name,pix_fmt",
+            "-of", "default=noprint_wrappers=1:nokey=1",
+            filepath,
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    codecs = [line.strip() for line in probe.stdout.splitlines() if line.strip()]
+    if probe.returncode == 0 and codecs[:1] == ["h264"] and codecs[1:2] == ["yuv420p"] and filepath.lower().endswith(".mp4"):
+        return filepath
+
+    normalized = os.path.join(os.path.dirname(filepath), "telegram_compatible.mp4")
+    command = [
+        FFMPEG_PATH, "-hide_banner", "-loglevel", "error", "-y",
+        "-i", filepath,
+        "-map", "0:v:0", "-map", "0:a:0?",
+        "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p",
+        "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart",
+        normalized,
+    ]
+    converted = subprocess.run(command, capture_output=True, text=True, check=False)
+    if converted.returncode != 0 or not os.path.isfile(normalized):
+        detail = converted.stderr[-500:] if converted.stderr else ""
+        raise RuntimeError(f"Telegram video dönüştürülemedi: {detail}")
+    os.remove(filepath)
+    return normalized
 
 
 def _collect_files(directory: str, extensions: tuple[str, ...]) -> list[str]:
@@ -286,9 +331,16 @@ def _download_video_ytdlp(
         cleanup(session)
         return None, ""
 
+    try:
+        compatible_video = _ensure_telegram_video(video_files[0])
+    except (OSError, RuntimeError) as exc:
+        logger.warning("Video Telegram uyumluluğuna çevrilemedi: %s", exc)
+        cleanup(session)
+        return None, str(exc)
+
     return MediaResult(
         media_type="video",
-        files=[video_files[0]],
+        files=[compatible_video],
         caption=caption,
         work_dir=session,
     ), ""

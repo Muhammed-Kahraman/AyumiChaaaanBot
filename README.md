@@ -47,10 +47,13 @@ cp .env.example .env
 # .env dosyasını düzenleyin ve token'ınızı girin
 ```
 
-OpenAI anahtarını ekledikten sonra spoiler analizini açın:
+Groq anahtarını ekledikten sonra ücretsiz kota ile spoiler analizini açın:
 
 ```env
-OPENAI_API_KEY=...
+AI_PROVIDER=groq
+GROQ_API_KEY=...
+GROQ_TRANSCRIPTION_MODEL=whisper-large-v3-turbo
+GROQ_VISION_MODEL=qwen/qwen3.6-27b
 AI_SPOILER_ENABLED=true
 SPOILER_THRESHOLD=3
 AI_FAILURE_POLICY=spoiler

@@ -84,21 +84,45 @@ DOWNLOAD_DIR = "/tmp/ayumu_downloads"   # Geçici indirme dizini
 # ── AI Spoiler Detection ────────────────────────────────────────────────────────────────
 AI_SPOILER_ENABLED = _env_bool("AI_SPOILER_ENABLED", False)
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+AI_PROVIDER = os.getenv(
+    "AI_PROVIDER", "groq" if GROQ_API_KEY else "openai"
+).strip().lower()
+if AI_PROVIDER not in {"groq", "openai"}:
+    AI_PROVIDER = "groq" if GROQ_API_KEY else "openai"
+
+GROQ_BASE_URL = os.getenv(
+    "GROQ_BASE_URL", "https://api.groq.com/openai/v1"
+).rstrip("/")
+GROQ_TRANSCRIPTION_MODEL = os.getenv(
+    "GROQ_TRANSCRIPTION_MODEL", "whisper-large-v3-turbo"
+)
+GROQ_VISION_MODEL = os.getenv("GROQ_VISION_MODEL", "qwen/qwen3.6-27b")
 OPENAI_TRANSCRIPTION_MODEL = os.getenv(
     "OPENAI_TRANSCRIPTION_MODEL", "gpt-4o-mini-transcribe"
 )
 OPENAI_VISION_MODEL = os.getenv("OPENAI_VISION_MODEL", "gpt-5.6-luna")
+AI_COST_LIMIT_USD = max(0.0, _env_float("AI_COST_LIMIT_USD", 4.50))
+AI_COST_TRACK_FILE = os.getenv(
+    "AI_COST_TRACK_FILE", "/opt/ayumuchanbot/ai_usage.json"
+)
+SPOILER_VOTE_FILE = os.getenv(
+    "SPOILER_VOTE_FILE", "/opt/ayumuchanbot/runtime/spoiler_votes.json"
+)
 OPENAI_REASONING_EFFORT = os.getenv(
-    "OPENAI_REASONING_EFFORT", "none"
+    "OPENAI_REASONING_EFFORT", "low"
 ).strip().lower()
 if OPENAI_REASONING_EFFORT not in {
     "none", "minimal", "low", "medium", "high", "xhigh", "max"
 }:
-    OPENAI_REASONING_EFFORT = "none"
+    OPENAI_REASONING_EFFORT = "low"
 
-SPOILER_THRESHOLD = min(5, _env_int("SPOILER_THRESHOLD", 3))
+SPOILER_THRESHOLD = min(5, _env_int("SPOILER_THRESHOLD", 2))
 SPOILER_MIN_CONFIDENCE = min(
     1.0, _env_float("SPOILER_MIN_CONFIDENCE", 0.65)
+)
+ANIME_TITLE_MIN_CONFIDENCE = min(
+    1.0, _env_float("ANIME_TITLE_MIN_CONFIDENCE", 0.90)
 )
 AI_FAILURE_POLICY = os.getenv("AI_FAILURE_POLICY", "spoiler").strip().lower()
 if AI_FAILURE_POLICY not in {"spoiler", "normal"}:
@@ -119,6 +143,34 @@ AI_TIMEOUT_SECONDS = max(10, _env_int("AI_TIMEOUT_SECONDS", 90, 10))
 AI_MAX_RETRIES = min(5, _env_int("AI_MAX_RETRIES", 2))
 AI_JOB_CONCURRENCY = max(1, _env_int("AI_JOB_CONCURRENCY", 2, 1))
 MEDIA_QUEUE_CAPACITY = max(1, _env_int("MEDIA_QUEUE_CAPACITY", 50, 1))
+
+# ── Community Activity Game ──────────────────────────────────────────────────
+ACTIVITY_ENABLED = _env_bool("ACTIVITY_ENABLED", True)
+ACTIVITY_QUIZ_ENABLED = _env_bool("ACTIVITY_QUIZ_ENABLED", True)
+ACTIVITY_QUIZ_DURATION_SECONDS = max(
+    30, _env_int("ACTIVITY_QUIZ_DURATION_SECONDS", 120, 30)
+)
+ACTIVITY_DB_FILE = os.getenv(
+    "ACTIVITY_DB_FILE", "/opt/ayumuchanbot/runtime/activity.sqlite3"
+)
+ACTIVITY_DEFAULT_GROUP_ID = _env_int(
+    "ACTIVITY_DEFAULT_GROUP_ID", 0, -10**18
+)
+ACTIVITY_OWNER_USER_ID = _env_int("ACTIVITY_OWNER_USER_ID", 0)
+ACTIVITY_OWNER_USERNAME = os.getenv("ACTIVITY_OWNER_USERNAME", "").strip().lstrip("@")
+ACTIVITY_TIMEZONE = os.getenv("ACTIVITY_TIMEZONE", "Europe/Istanbul").strip()
+ACTIVITY_WEEKLY_REPORT_DAY = min(
+    6, _env_int("ACTIVITY_WEEKLY_REPORT_DAY", 6, 0)
+)
+ACTIVITY_WEEKLY_REPORT_HOUR = min(
+    23, _env_int("ACTIVITY_WEEKLY_REPORT_HOUR", 20, 0)
+)
+ACTIVITY_LINK_DAILY_LIMIT = max(
+    0, _env_int("ACTIVITY_LINK_DAILY_LIMIT", 5, 0)
+)
+ACTIVITY_RECOMMENDATION_WEEKLY_LIMIT = max(
+    0, _env_int("ACTIVITY_RECOMMENDATION_WEEKLY_LIMIT", 3, 0)
+)
 
 FFMPEG_PATH = os.getenv("FFMPEG_PATH", "ffmpeg")
 FFPROBE_PATH = os.getenv("FFPROBE_PATH", "ffprobe")
